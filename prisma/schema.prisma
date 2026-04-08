@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Session {
+  id          String       @id @default(cuid())
+  flavor      String
+  date        DateTime     @default(now())
+  benchCodes  String       // JSON array or comma separated, e.g. "CL-1,CL-2,CL-3"
+  isActive    Boolean      @default(true)
+  profiles    Profile[]
+  evaluations Evaluation[]
+  preferences Preference[]
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  sessionId   String
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name        String
+  drinksBeer  Boolean
+  drinksIpa   Boolean
+
+  @@unique([sessionId, name])
+}
+
+model Evaluation {
+  id          String   @id @default(cuid())
+  sessionId   String
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  tasterName  String   // ties to Profile.name
+  benchCode   String   // from session.benchCodes
+  aroma       Int
+  flavor      Int
+  bitterness  String
+  linger      Boolean
+  overall     Int
+  wouldBuy    String
+  drinkAgain  String
+  oneWord     String
+
+  @@unique([sessionId, tasterName, benchCode])
+}
+
+model Preference {
+  id             String   @id @default(cuid())
+  sessionId      String
+  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  tasterName     String   // ties to Profile.name
+  preferredBench String   // from session.benchCodes
+  reason         String
+
+  @@unique([sessionId, tasterName])
+}
