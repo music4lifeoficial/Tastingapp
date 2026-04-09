@@ -4,12 +4,11 @@ import { useState, useMemo } from "react";
 import { updateSessionStatus } from "../../../actions";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  LineChart, Line
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import { 
   Play, Pause, Square, Users, ClipboardList, BarChart3, ChevronLeft, 
-  Search, Filter, TrendingUp, AlertTriangle, Heart, Zap
+  Search, TrendingUp, AlertTriangle, Zap
 } from "lucide-react";
 import Link from "next/link";
 
@@ -30,7 +29,7 @@ export default function AdminSessionClient({ session }: { session: any }) {
     
     // 1. Calculate Segment Data
     const getVariantAverages = (profiles: any[]) => {
-      const profileIds = profiles.map(p => p.id);
+      const profileIds = profiles.map((p: any) => p.id);
       return session.variants.map((v: any) => {
         const variantResponses = session.responses.filter((r: any) => r.variantId === v.id && profileIds.includes(r.profileId));
         const data: any = { name: v.code };
@@ -66,7 +65,7 @@ export default function AdminSessionClient({ session }: { session: any }) {
     const radarData = starQuestions.map((q: any) => {
       const entry: any = { subject: q.text, fullMark: 6 };
       session.variants.forEach((v: any) => {
-        const avg = allAverages.find(a => a.name === v.code)[q.text];
+        const avg = allAverages.find((a: any) => a.name === v.code)[q.text];
         entry[v.code] = avg;
       });
       return entry;
@@ -98,7 +97,6 @@ export default function AdminSessionClient({ session }: { session: any }) {
 
   return (
     <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 2rem 4rem 2rem" }}>
-      {/* 2026 Header with blurred background effect */}
       <header style={{ 
         padding: "2rem 0", 
         marginBottom: "2rem", 
@@ -115,7 +113,7 @@ export default function AdminSessionClient({ session }: { session: any }) {
              {session.flavor.name} <span style={{ color: "var(--gold)", fontWeight: "300" }}>Analytics</span>
            </h1>
            <p style={{ color: "var(--muted)", fontSize: "0.95rem", marginTop: "0.4rem" }}>
-             ID Sesión: <span style={{ fontWeight: "700", color: "var(--text)" }}>{session.customCode || session.id.slice(-8).toUpperCase()}</span> • {new Date(session.createdAt).toLocaleDateString('es-ES', { month: 'long', day: 'numeric', year: 'numeric' })}
+             ID Sesión: <span style={{ fontWeight: "700", color: "var(--text)" }}>{session.customCode || session.id.slice(-8).toUpperCase()}</span> • {new Date(session.createdAt).toLocaleDateString()}
            </p>
         </div>
 
@@ -141,10 +139,8 @@ export default function AdminSessionClient({ session }: { session: any }) {
         </div>
       </header>
 
-      {/* Insight Highlight Cards 2026 */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem", marginBottom: "3rem" }}>
          <div style={{ background: "linear-gradient(135deg, white 0%, #f9fafb 100%)", padding: "2rem", borderRadius: "24px", boxShadow: "0 4px 20px rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", right: "-20px", top: "-20px", opacity: 0.05 }}><TrendingUp size={120} /></div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.8rem", color: "var(--green)", marginBottom: "1rem" }}>
                <Zap size={20} fill="currentColor" /> <span style={{ fontWeight: "800", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "1px" }}>Crowd Favorite</span>
             </div>
@@ -155,7 +151,6 @@ export default function AdminSessionClient({ session }: { session: any }) {
          </div>
 
          <div style={{ background: "linear-gradient(135deg, white 0%, #f9fafb 100%)", padding: "2rem", borderRadius: "24px", boxShadow: "0 4px 20px rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", right: "-20px", top: "-20px", opacity: 0.05 }}><AlertTriangle size={120} /></div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.8rem", color: "var(--accent)", marginBottom: "1rem" }}>
                <AlertTriangle size={20} fill="currentColor" /> <span style={{ fontWeight: "800", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "1px" }}>Most Polarizing</span>
             </div>
@@ -183,9 +178,7 @@ export default function AdminSessionClient({ session }: { session: any }) {
          </div>
       </div>
 
-      {/* Main Analysis Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "2rem", marginBottom: "3rem" }}>
-         {/* Segmented Averages */}
          <div style={{ background: "white", padding: "2.5rem", borderRadius: "32px", boxShadow: "0 10px 40px rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem" }}>
                <div>
@@ -236,7 +229,6 @@ export default function AdminSessionClient({ session }: { session: any }) {
             </div>
          </div>
 
-         {/* Radar Spider Comparison */}
          <div style={{ background: "white", padding: "2.5rem", borderRadius: "32px", boxShadow: "0 10px 40px rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)" }}>
             <h3 style={{ fontSize: "1.5rem", fontWeight: "800", marginBottom: "0.3rem" }}>Perfiles Organolépticos</h3>
             <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "2rem" }}>Huella sensorial comparativa.</p>
@@ -266,11 +258,10 @@ export default function AdminSessionClient({ session }: { session: any }) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "0.8fr 1.2fr", gap: "2rem", marginBottom: "3rem" }}>
-         {/* Sentiment Matrix / Keyword List */}
          <div style={{ background: "white", padding: "2.5rem", borderRadius: "32px", boxShadow: "0 10px 40px rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)" }}>
             <h3 style={{ fontSize: "1.5rem", fontWeight: "800", marginBottom: "1.5rem" }}>Matriz de Conceptos</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
-               {[...new Set(insights.allWords)].map((word: string, i) => (
+               {[...new Set(insights.allWords)].map((word: any, i) => (
                  <span 
                     key={i} 
                     style={{ 
@@ -286,11 +277,9 @@ export default function AdminSessionClient({ session }: { session: any }) {
                     {word}
                  </span>
                ))}
-               {insights.allWords.length === 0 && <p style={{ color: "#9ca3af", fontStyle: "italic" }}>Sin descriptores aún.</p>}
             </div>
          </div>
 
-         {/* Preferred Variant Breakdown */}
          <div style={{ background: "white", padding: "2.5rem", borderRadius: "32px", boxShadow: "0 10px 40px rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)" }}>
             <h3 style={{ fontSize: "1.5rem", fontWeight: "800", marginBottom: "2rem" }}>Share de Preferencia</h3>
             {session.questions.filter((q: any) => q.scope === "GLOBAL" && q.text.toLowerCase().includes("preferiste")).map((q: any) => {
@@ -324,15 +313,8 @@ export default function AdminSessionClient({ session }: { session: any }) {
          </div>
       </div>
 
-      {/* Taster Detail Table 2026 */}
       <div style={{ background: "white", padding: "2.5rem", borderRadius: "32px", boxShadow: "0 10px 40px rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)" }}>
-         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-            <h3 style={{ fontSize: "1.5rem", fontWeight: "800" }}>Raw Data: Catadores</h3>
-            <div style={{ background: "#f3f4f6", padding: "0.8rem 1.2rem", borderRadius: "100px", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-               <Search size={14} color="#9ca3af" />
-               <input type="text" placeholder="Buscar catador..." style={{ background: "transparent", border: "none", fontSize: "0.85rem", color: "var(--text)", width: "150px" }} />
-            </div>
-         </div>
+         <h3 style={{ fontSize: "1.5rem", fontWeight: "800", marginBottom: "2rem" }}>Raw Data: Catadores</h3>
          <div style={{ overflowX: "auto" }}>
            <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 0.8rem" }}>
              <thead>
@@ -348,7 +330,7 @@ export default function AdminSessionClient({ session }: { session: any }) {
                  const prefQ = session.questions.find((q: any) => q.scope === "GLOBAL" && q.text.toLowerCase().includes("preferiste"));
                  const prefResp = p.responses.find((r: any) => r.questionId === prefQ?.id)?.value;
                  return (
-                   <tr key={p.id} style={{ background: "#f9fafb", borderRadius: "16px", transition: "transform 0.2s" }}>
+                   <tr key={p.id} style={{ background: "#f9fafb", borderRadius: "16px" }}>
                       <td style={{ padding: "1.2rem 1.5rem", fontWeight: "800", borderRadius: "16px 0 0 16px", borderLeft: "4px solid var(--gold)" }}>{p.name}</td>
                       <td style={{ padding: "1.2rem 0" }}>
                          <div style={{ display: "flex", gap: "0.5rem" }}>
