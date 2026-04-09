@@ -1,116 +1,129 @@
-﻿'use server'
+'use server'
 
 import { prisma } from '../lib/prisma'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 
+// --- ADMIN AUTH ---
+export async function loginAdmin(formData: FormData) {
+  const password = formData.get('password') as string
+  if (password === process.env.ADMIN_PASSWORD) {
+    const cs = await cookies()
+    cs.set('admin_auth', 'true', { httpOnly: true, secure: true })
+    redirect('/admin')
+  }
+  redirect('/admin?error=1')
+}
+
+export async function logoutAdmin() {
+  const cs = await cookies()
+  cs.delete('admin_auth')
+  redirect('/')
+}
+
+// --- FLAVOR & SESSION MANAGEMENT ---
 export async function createSession(formData: FormData) {
-  const flavor = formData.get('flavor') as string
-  const benchCodes = formData.get('benchCodes') as string
-  
-  if (!flavor || !benchCodes) throw new Error("Missing fields")
-  
-  const formattedBenchCodes = benchCodes.split(',').map((s: string) => s.trim()).filter(Boolean).join(',')
-  
+  const flavorName = formData.get('flavorName') as string
+  const customCode = (formData.get('customCode') as string) || null
+  const variantsInput = formData.get('variants') as string
+
+  if (!flavorName || !variantsInput) throw new Error('Faltan campos obligatorios')
+
+  let flavor = await prisma.flavor.findUnique({ where: { name: flavorName } })
+  if (!flavor) {
+    flavor = await prisma.flavor.create({ data: { name: flavorName } })
+  }
+
+  const variantCodes = variantsInput.split(',').map((v: string) => v.trim()).filter(Boolean)
+
   const session = await prisma.session.create({
     data: {
-      flavor,
-      benchCodes: formattedBenchCodes,
+      flavorId: flavor.id,
+      customCode: customCode || null,
+      status: 'ACTIVE',
+      variants: {
+        create: variantCodes.map((code: string) => ({ code }))
+      }
     }
   })
-  
-  redirect(`/session/${session.id}/share`)
+
+  // Create Standard Questions
+  const standardQuestions = [
+    { text: 'Aroma', type: 'STAR', scope: 'VARIANT', order: 1 },
+    { text: 'Sabor', type: 'STAR', scope: 'VARIANT', order: 2 },
+    { text: 'Amargor - es agradable o te molesta?', type: 'OPTION', options: 'Agradable,Me molesta,No lo siento', scope: 'VARIANT', order: 3 },
+    { text: 'Sientes que algo queda en boca despues de tomar?', type: 'OPTION', options: 'Si,No', scope: 'VARIANT', order: 4 },
+    { text: 'Puntaje General', type: 'STAR', scope: 'VARIANT', order: 5 },
+    { text: 'Lo comprarias?', type: 'OPTION', options: 'Si,No,Tal vez', scope: 'VARIANT', order: 6 },
+    { text: 'Lo volverias a tomar?', type: 'OPTION', options: 'Si,No,Tal vez', scope: 'VARIANT', order: 7 },
+    { text: 'Una palabra o frase - a que te recuerda?', type: 'TEXT', scope: 'VARIANT', order: 8 },
+    { text: 'Cual variante preferiste?', type: 'OPTION', options: variantCodes.join(','), scope: 'GLOBAL', order: 9 },
+    { text: 'Por que?', type: 'TEXT', scope: 'GLOBAL', order: 10 }
+  ]
+
+  for (const q of standardQuestions) {
+    await prisma.question.create({
+      data: {
+        sessionId: session.id,
+        text: q.text,
+        type: q.type as any,
+        scope: q.scope as any,
+        options: q.options || null,
+        order: q.order
+      }
+    })
+  }
+
+  redirect(`/admin/session/${session.id}`)
 }
 
-export async function joinSession(formData: FormData) {
-  const sessionId = formData.get('sessionId') as string
-  if (!sessionId) throw new Error("Session missing")
-  redirect(`/tasting/${sessionId}`)
+export async function updateSessionStatus(sessionId: string, status: 'ACTIVE' | 'PAUSED' | 'TERMINATED') {
+  await prisma.session.update({
+    where: { id: sessionId },
+    data: { status }
+  })
 }
 
-export async function createProfileAndStartTasting(formData: FormData) {
+// --- TASTER ACTIONS ---
+export async function createProfile(formData: FormData) {
   const sessionId = formData.get('sessionId') as string
   const name = formData.get('name') as string
-  const drinksBeer = formData.get('drinksBeer') === 'on'
-  const drinksIpa = formData.get('drinksIpa') === 'on'
+  const drinksBeer = formData.get('drinksBeer') === 'on' || formData.get('drinksBeer') === 'true'
+  const drinksIpa = formData.get('drinksIpa') === 'on' || formData.get('drinksIpa') === 'true'
 
-  if (!name || !sessionId) throw new Error("Name is required")
-
-  await prisma.profile.upsert({
-    where: {
-      sessionId_name: {
-        sessionId,
-        name
-      }
-    },
-    update: {
-      drinksBeer,
-      drinksIpa
-    },
-    create: {
-      sessionId,
-      name,
-      drinksBeer,
-      drinksIpa
-    }
+  const profile = await prisma.profile.create({
+    data: { sessionId, name, drinksBeer, drinksIpa }
   })
 
-  redirect(`/tasting/${sessionId}/evaluate?taster=${encodeURIComponent(name)}&step=0`)
+  redirect(`/tasting/${sessionId}/evaluate?profileId=${profile.id}`)
 }
 
-export async function saveEvaluation(formData: FormData) {
-  const sessionId = formData.get('sessionId') as string
-  const tasterName = formData.get('tasterName') as string
-  const benchCode = formData.get('benchCode') as string
-  const aroma = parseInt(formData.get('aroma') as string)
-  const flavor = parseInt(formData.get('flavor') as string)
-  const bitterness = formData.get('bitterness') as string
-  const linger = formData.get('linger') === 'true' || formData.get('linger') === 'on'
-  const overall = parseInt(formData.get('overall') as string)
-  const wouldBuy = formData.get('wouldBuy') as string
-  const drinkAgain = formData.get('drinkAgain') as string
-  const oneWord = formData.get('oneWord') as string
+// Bulk submit all responses at end of session
+export async function submitAllResponses(payload: {
+  sessionId: string
+  profileId: string
+  responses: { questionId: string; variantId: string | null; value: string }[]
+}) {
+  const { sessionId, profileId, responses } = payload
 
-  await prisma.evaluation.upsert({
-    where: {
-      sessionId_tasterName_benchCode: {
-        sessionId,
-        tasterName,
-        benchCode
-      }
-    },
-    update: {
-      aroma, flavor, bitterness, linger, overall, wouldBuy, drinkAgain, oneWord
-    },
-    create: {
-      sessionId, tasterName, benchCode, aroma, flavor, bitterness, linger, overall, wouldBuy, drinkAgain, oneWord
+  for (const resp of responses) {
+    const { questionId, variantId, value } = resp
+
+    const existing = await prisma.response.findFirst({
+      where: { profileId, questionId, variantId }
+    })
+
+    if (existing) {
+      await prisma.response.update({
+        where: { id: existing.id },
+        data: { value: String(value) }
+      })
+    } else {
+      await prisma.response.create({
+        data: { sessionId, profileId, questionId, variantId, value: String(value) }
+      })
     }
-  })
+  }
 
   return { success: true }
 }
-
-export async function savePreference(formData: FormData) {
-  const sessionId = formData.get('sessionId') as string
-  const tasterName = formData.get('tasterName') as string
-  const preferredBench = formData.get('preferredBench') as string
-  const reason = formData.get('reason') as string
-
-  await prisma.preference.upsert({
-    where: {
-      sessionId_tasterName: {
-        sessionId,
-        tasterName
-      }
-    },
-    update: {
-      preferredBench, reason
-    },
-    create: {
-      sessionId, tasterName, preferredBench, reason
-    }
-  })
-
-  redirect(`/tasting/${sessionId}/finish?success=1`)
-}
-
-

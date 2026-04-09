@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   previewFeatures = ["driverAdapters"]
   provider = "prisma-client-js"
@@ -8,57 +5,83 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
+}
 
+enum Status {
+  ACTIVE
+  PAUSED
+  TERMINATED
+}
 
+enum QuestionType {
+  STAR
+  TEXT
+  OPTION
+}
+
+enum QuestionScope {
+  GLOBAL
+  VARIANT
+}
+
+model Flavor {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  sessions    Session[]
 }
 
 model Session {
-  id          String       @id @default(cuid())
-  flavor      String
-  date        DateTime     @default(now())
-  benchCodes  String       // JSON array or comma separated, e.g. "CL-1,CL-2,CL-3"
-  isActive    Boolean      @default(true)
+  id          String      @id @default(cuid())
+  flavorId    String
+  flavor      Flavor      @relation(fields: [flavorId], references: [id])
+  customCode  String?     @unique
+  status      Status      @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  variants    Variant[]
+  questions   Question[]
   profiles    Profile[]
-  evaluations Evaluation[]
-  preferences Preference[]
+  responses   Response[]
+}
+
+model Variant {
+  id          String     @id @default(cuid())
+  sessionId   String
+  session     Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  code        String     // e.g. "CL-1"
+  responses   Response[]
+}
+
+model Question {
+  id          String        @id @default(cuid())
+  sessionId   String
+  session     Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  text        String
+  type        QuestionType
+  scope       QuestionScope
+  options     String?       // Comma separated options if type is OPTION
+  order       Int           @default(0)
+  responses   Response[]
 }
 
 model Profile {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   sessionId   String
-  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session     Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   name        String
   drinksBeer  Boolean
   drinksIpa   Boolean
-
-  @@unique([sessionId, name])
+  responses   Response[]
 }
 
-model Evaluation {
+model Response {
   id          String   @id @default(cuid())
   sessionId   String
   session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  tasterName  String   // ties to Profile.name
-  benchCode   String   // from session.benchCodes
-  aroma       Int
-  flavor      Int
-  bitterness  String
-  linger      Boolean
-  overall     Int
-  wouldBuy    String
-  drinkAgain  String
-  oneWord     String
-
-  @@unique([sessionId, tasterName, benchCode])
-}
-
-model Preference {
-  id             String   @id @default(cuid())
-  sessionId      String
-  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  tasterName     String   // ties to Profile.name
-  preferredBench String   // from session.benchCodes
-  reason         String
-
-  @@unique([sessionId, tasterName])
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  variantId   String?  // null if global question
+  variant     Variant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  value       String   // normalized value as string
 }
