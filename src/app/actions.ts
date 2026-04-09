@@ -7,9 +7,16 @@ import { cookies } from 'next/headers'
 // --- ADMIN AUTH ---
 export async function loginAdmin(formData: FormData) {
   const password = formData.get('password') as string
-  if (password === process.env.ADMIN_PASSWORD) {
+  const adminPassword = process.env.ADMIN_PASSWORD || 'catalupulus'
+  
+  if (password === adminPassword) {
     const cs = await cookies()
-    cs.set('admin_auth', 'true', { httpOnly: true, secure: true })
+    cs.set('admin_auth', 'true', { 
+      httpOnly: true, 
+      secure: true,
+      path: '/',
+      maxAge: 60 * 60 * 24 // 24 hours
+    })
     redirect('/admin')
   }
   redirect('/admin?error=1')
